@@ -206,6 +206,42 @@ def create_composite_nodes(tree, params, img=None, idx=0):
 
     return (res_paths)
 
+def calculateCameraYaw(camera, camera_yaw, centerPoint = Vector((0.0, 0.0, 0.0))):
+    print("camera rotation")
+    print(camera.rotation_euler)
+    print("camera location")
+    print(camera.location)
+
+    # calculate dot product
+    #cameraLocationVectorNorm = Vector((camera.location.x - centerPoint.x, 0.0, camera.location.z - centerPoint.z)).normalized()
+
+    #cosineAngle = np.dot(Vector((0.0,0.0,1.0)),cameraLocationVectorNorm )
+    #print(cosineAngle)
+    #print(np.arccos(cosineAngle))
+
+    camera_yaw_adjusted = np.arctan((camera.location.x - centerPoint.x)/ (camera.location.z - centerPoint.z))
+    print("camera_yaw variable")
+    print(camera_yaw)
+    print("camera_yaw_adjusted before changes")
+    print(camera_yaw_adjusted)
+
+    #if (camera_yaw_adjusted < 0 and camera_yaw < np.pi / 2.0):
+    #    print("1st condition satisfied")
+    #    camera_yaw_adjusted = camera_yaw_adjusted + np.pi
+
+    if (camera_yaw_adjusted < 0 and (camera_yaw > np.pi/ 2.0) and (camera_yaw < np.pi)):
+        print("2nd condition satisfied")
+        camera_yaw_adjusted = camera_yaw_adjusted + np.pi
+
+    if (camera_yaw_adjusted > 0 and camera_yaw > 3.0 * np.pi/ 2.0):
+        print("4th condition satisfied")
+        camera_yaw_adjusted = camera_yaw_adjusted + np.pi
+
+    #if camera_yaw < np.pi:
+    #    camera_yaw_adjusted + np.pi
+
+    return camera_yaw_adjusted #np.arccos(cosineAngle) + np.pi
+
 def setupCameras(scene, params):
 
     # camera_params = {'camera_dist_to_centre': camera_dist_to_centre,
@@ -241,24 +277,19 @@ def setupCameras(scene, params):
 
     cam_ob.location = Vector((gt_cam_location.x,
                              gt_cam_location.y,
-                             gt_cam_location.z + 1.0))  # move up along z-axis
+                             gt_cam_location.z))  # move up along z-axis
 
     camera_roll = -(np.arctan((camera_height - camera_height_above_ground) / radius))
     camera_roll = camera_roll + params['camera_roll_from_centerpoint']
 
-    camera_yaw_adjusted = np.arctan(cam_ob.location.x /(cam_ob.location.z - 1.0))
+    #camera_yaw_adjusted = calculateCameraYaw(cam_ob, camera_yaw, Vector((0.0,0.0,0.0)))
 
-    if camera_yaw < np.pi:
-        camera_yaw_adjusted + np.pi
-
-    cam_ob.rotation_euler = Euler((camera_roll,
-                                    camera_yaw_adjusted,
-                                    0.0), 'XYZ')
+    cam_ob.rotation_euler.x = camera_roll
 
     cam_ob.data.angle = math.radians(40)
-    cam_ob.data.lens = 35   # was 60
+    cam_ob.data.lens = 40   # was 60
     cam_ob.data.clip_start = 0.1
-    cam_ob.data.sensor_width = 35 # 32
+    cam_ob.data.sensor_width = 32 # 32
 
     ## 2nd camera
     tangent = Vector((0.0, 1.0, 0.0)).cross(gt_cam_location)
@@ -279,12 +310,12 @@ def setupCameras(scene, params):
                                   (0., -1, 0., -1.0),
                                   (-1., 0., 0., 0.),
                                   (0.0, 0.0, 0.0, 1.0)))
-    cam_ob1.location = Vector((cam1_location.x, cam1_location.y, cam1_location.z + 1.0))
-    cam_ob1.rotation_euler = Euler((camera_roll, camera_yaw_adjusted, 0.0), 'XYZ')
+    cam_ob1.location = Vector((cam1_location.x, cam1_location.y, cam1_location.z))
+    cam_ob1.rotation_euler.x = camera_roll
     cam_ob1.data.angle = math.radians(40)
-    cam_ob1.data.lens = 35  # was 60
+    cam_ob1.data.lens = 40  # was 60
     cam_ob1.data.clip_start = 0.1
-    cam_ob1.data.sensor_width = 35  # 32
+    cam_ob1.data.sensor_width = 32  # 32
 
     ## 3rd camera
     bpy.ops.object.camera_add(view_align=False,
@@ -296,12 +327,12 @@ def setupCameras(scene, params):
                                    (0., -1, 0., -1.0),
                                    (-1., 0., 0., 0.),
                                    (0.0, 0.0, 0.0, 1.0)))
-    cam_ob3.location = Vector((cam3_location.x, cam3_location.y, cam3_location.z + 1.0))
-    cam_ob3.rotation_euler = Euler((camera_roll, camera_yaw_adjusted, 0.0), 'XYZ')
+    cam_ob3.location = Vector((cam3_location.x, cam3_location.y, cam3_location.z))
+    cam_ob3.rotation_euler.x = camera_roll
     cam_ob3.data.angle = math.radians(40)
-    cam_ob3.data.lens = 35  # was 60
+    cam_ob3.data.lens = 40  # was 60
     cam_ob3.data.clip_start = 0.1
-    cam_ob3.data.sensor_width = 35  # 32
+    cam_ob3.data.sensor_width = 32  # 32
 
     return  cam_ob, cam_ob1, cam_ob3
 
@@ -472,10 +503,10 @@ def main():
     import argparse
     log_message(sys.argv)
     parser = argparse.ArgumentParser(description='Generate synth dataset images.')
-    parser.add_argument('--idx', type=int,
-                        help='idx of the requested sequence')
+    parser.add_argument('--runNumber', type=int,
+                        help='runNumber of the requested sequence')
     args = parser.parse_args(sys.argv[sys.argv.index("--") + 1:])
-    idx = args.idx
+    runNumber = args.runNumber
 
     log_message("Loading models file..")
     idx_info = load(open("pkl/idx_info.pickle", 'rb'))
@@ -513,7 +544,7 @@ def main():
     resx = 280 #720
     stepsize = 20
     stride = 50
-    clipsize = 10
+    clipsize = 5
 
     log_message("Deleting cube")  ## TODO: may need to refactor if this holds material
     # delete the default cube (which held the material)
@@ -523,8 +554,10 @@ def main():
 
     log_message("=========================")
     log_message("Generating random index..")
-    idx = randint(0, length_idx_info - 1)
-    #idx = 32
+    #idx = randint(0, length_idx_info - 1)
+    idx = 2425  # 4th corner
+    #idx = 2617  # 2nd corner
+    #idx = 1381
 
     log_message("idx = %d" % idx)
 
@@ -551,7 +584,7 @@ def main():
     #output_path_f3 = join(output_path, 'cam%d' % 3)
 
     log_message("Creating temp directory")
-    tmp_path_f = join(tmp_path, 'run%d_%s_c%04d' % (0, idx, (0 + 1)))
+    tmp_path_f = join(tmp_path, 'run%d_%s_c%04d' % (0, runNumber, (0 + 1)))
     if exists(tmp_path_f) and tmp_path_f != "" and tmp_path_f != "/":
         os.system('rm -rf %s' % tmp_path_f)
     if not exists(tmp_path_f):
@@ -628,8 +661,8 @@ def main():
     # assign the existing spherical harmonics material
     ob.active_material = bpy.data.materials['Material']
 
-    log_message("Initializing cameras")
-    camera_dist_to_centre = 2.5 + 2.5 * np.random.rand()
+    log_message("Setup camera variables")
+    camera_dist_to_centre = 2.5 + 2 * np.random.rand()
     camera_height = camera_height_above_ground + np.random.rand()
     camera_yaw  = 2 * np.pi * np.random.rand()   #random_zrot = randint(0, 360)
     camera_pitch = -0.092 * np.pi + 0.184 * np.pi * np.random.rand() # 33 degrees
@@ -696,6 +729,8 @@ def main():
     orig_pelvis_loc = (arm_ob.matrix_world.copy() * arm_ob.pose.bones[obname + '_Pelvis'].head.copy()) - Vector(
             (-1., 1., 1.))
     orig_cam_loc = camera.location.copy()
+    orig_cam_loc1 = cam_ob1.location.copy()
+    orig_cam_loc3 = cam_ob3.location.copy()
 
     # unblocking both the pose and the blendshape limits
     for k in ob.data.shape_keys.key_blocks.keys():
@@ -825,7 +860,24 @@ def main():
             new_pelvis_loc = arm_ob.matrix_world.copy() * arm_ob.pose.bones[obname + '_Pelvis'].head.copy()
             print (new_pelvis_loc.copy() - orig_pelvis_loc.copy())
 
-            #camera.location = orig_cam_loc.copy() + (new_pelvis_loc.copy() - orig_pelvis_loc.copy())
+            new_pelvis_location = new_pelvis_loc.copy()
+            new_pelvis_location_xz = Vector((new_pelvis_location.x, 0.0, new_pelvis_location.z))
+
+            camera.location = orig_cam_loc.copy() +  new_pelvis_location_xz   # - orig_pelvis_loc.copy())
+            cam_ob1.location = orig_cam_loc1.copy() + new_pelvis_location_xz  #  - orig_pelvis_loc.copy())
+            cam_ob3.location = orig_cam_loc3.copy() + new_pelvis_location_xz  #- orig_pelvis_loc.copy())
+
+            cam_yaw_adjusted_for_figure = calculateCameraYaw(camera, camera_yaw, new_pelvis_location_xz)  #  Vector((0.0, 0.0, 1.0)))
+            cam_yaw_adjusted_for_figure1 = calculateCameraYaw(cam_ob1, camera_yaw, new_pelvis_location_xz)
+            cam_yaw_adjusted_for_figure3 = calculateCameraYaw(cam_ob3, camera_yaw, new_pelvis_location_xz)
+            camera.rotation_euler.y = cam_yaw_adjusted_for_figure
+
+            if (camera_offset > 0.5):
+                cam_ob1.rotation_euler.y = cam_yaw_adjusted_for_figure1
+                cam_ob3.rotation_euler.y = cam_yaw_adjusted_for_figure3
+            else:
+                cam_ob1.rotation_euler.y = cam_yaw_adjusted_for_figure
+                cam_ob3.rotation_euler.y = cam_yaw_adjusted_for_figure
 
             camera.keyframe_insert('location', frame=get_real_frame(seq_frame))
             cam_ob1.keyframe_insert('location', frame=get_real_frame(seq_frame))
