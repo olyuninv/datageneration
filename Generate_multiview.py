@@ -225,13 +225,17 @@ def calculateCameraYaw(camera, camera_yaw, centerPoint = Vector((0.0, 0.0, 0.0))
     print("camera_yaw_adjusted before changes")
     print(camera_yaw_adjusted)
 
-    #if (camera_yaw_adjusted < 0 and camera_yaw < np.pi / 2.0):
-    #    print("1st condition satisfied")
-    #    camera_yaw_adjusted = camera_yaw_adjusted + np.pi
+    if (camera_yaw_adjusted < 0 and camera_yaw < np.pi / 2.0):
+        print("1st condition satisfied")
+        camera_yaw_adjusted = camera_yaw_adjusted + np.pi
 
-    if (camera_yaw_adjusted < 0 and (camera_yaw > np.pi/ 2.0) and (camera_yaw < np.pi)):
+    if ((camera_yaw > np.pi/ 2.0) and (camera_yaw < np.pi)):  #camera_yaw_adjusted < 0 and
         print("2nd condition satisfied")
         camera_yaw_adjusted = camera_yaw_adjusted + np.pi
+
+    #if ((camera_yaw > np.pi) and (camera_yaw < 3.0 * np.pi/ 2.0)):  # camera_yaw_adjusted < 0 and
+    #    print("3rd condition satisfied")
+    #    camera_yaw_adjusted = camera_yaw_adjusted + np.pi
 
     if (camera_yaw_adjusted > 0 and camera_yaw > 3.0 * np.pi/ 2.0):
         print("4th condition satisfied")
@@ -542,9 +546,17 @@ def main():
     # config
     resy = 320 #1280
     resx = 280 #720
-    stepsize = 20
+    stepsize = 30
     stride = 50
-    clipsize = 5
+    clipsize = 20
+    log_message("Setup camera variables")
+    camera_dist_to_centre = 3 + 2 * np.random.rand()
+    camera_height = camera_height_above_ground + np.random.rand()
+    camera_yaw = 2 * np.pi * np.random.rand()  # random_zrot = randint(0, 360)
+    camera_pitch = -0.092 * np.pi + 0.184 * np.pi * np.random.rand()  # 33 degrees
+    camera_roll_from_centerpoint = -0.0277 * np.pi + 0.0555 * np.pi * np.random.rand()  # 10 degrees
+    camera_offset = uniform(0.05, 1.5)
+    camera_offset_from_circle = randint(0, 100)  # 100% - 1st and 3rd cameras on a tangent line through 2nd camera, 0% - 1st and 3rd camera on the circle with same radius as 2nd camera
 
     log_message("Deleting cube")  ## TODO: may need to refactor if this holds material
     # delete the default cube (which held the material)
@@ -554,10 +566,11 @@ def main():
 
     log_message("=========================")
     log_message("Generating random index..")
-    #idx = randint(0, length_idx_info - 1)
-    idx = 2425  # 4th corner
+    idx = randint(0, length_idx_info - 1)
+    #idx = 2425  # 4th corner
     #idx = 2617  # 2nd corner
     #idx = 1381
+    #idx=120 # 3rd corner
 
     log_message("idx = %d" % idx)
 
@@ -661,15 +674,7 @@ def main():
     # assign the existing spherical harmonics material
     ob.active_material = bpy.data.materials['Material']
 
-    log_message("Setup camera variables")
-    camera_dist_to_centre = 2.5 + 2 * np.random.rand()
-    camera_height = camera_height_above_ground + np.random.rand()
-    camera_yaw  = 2 * np.pi * np.random.rand()   #random_zrot = randint(0, 360)
-    camera_pitch = -0.092 * np.pi + 0.184 * np.pi * np.random.rand() # 33 degrees
-    camera_roll_from_centerpoint = -0.0277 * np.pi + 0.0555 * np.pi * np.random.rand() # 10 degrees
-    camera_offset = uniform(0.05, 1.5)
-    camera_offset_from_circle = randint(0,100)  # 100% - 1st and 3rd cameras on a tangent line through 2nd camera, 0% - 1st and 3rd camera on the circle with same radius as 2nd camera
-
+    log_message("Initializing camera..")
     camera_params = {'camera_dist_to_centre': camera_dist_to_centre,
                      'camera_height': camera_height,
                      'camera_yaw': camera_yaw,
